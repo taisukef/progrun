@@ -1,5 +1,5 @@
-@import url(http://fonts.googleapis.com/css?family=Sansita+One);
-@import url(http://fonts.googleapis.com/css?family=Source+Code+Pro:600,900);
+@import url(https://fonts.googleapis.com/css?family=Sansita+One);
+@import url(https://fonts.googleapis.com/css?family=Source+Code+Pro:600,900);
 
 body {
 	text-align: center;
@@ -238,11 +238,13 @@ a {
 	position: absolute;
 	right: 120px;
 	top: 400px;
+	display: none; /* SSL対応必要 */
 }
 #load {
 	position: absolute;
 	right: 70px;
 	top: 400px;
+	display: none; /* SSL対応必要 */
 }
 
 /** selectBackground **/
