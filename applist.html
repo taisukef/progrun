@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html xmanifest="progrun.manifest">
+<head>
+<meta charset='utf-8'/>
+<title>みんなのアプリ - Code for Sabae</title>
+<!--
+<meta property="og:image" content="http://fukuno.jig.jp/2012/progrun.jpg"/>
+<link rel="apple-touch-icon" href="progrun.jpg"/>
+-->
+
+<!--
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+-->
+
+<meta name="format-detection" content="telephone=no"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, user-scalable=no"/> 
+<script src='util.js'></script>
+<script>
+
+var getDay = function(url) {
+	var name = url.substring(url.lastIndexOf('/') + 1, url.length - 4);
+	return name.substring(4, 6) + "/" + name.substring(6, 8) + " " + name.substring(8, 10) + ":" + name.substring(10, 12) + ":" + name.substring(12, 14);
+};
+var toArray = function(items) {
+	return items == undefined ? [] : items.length === undefined ? [ items ] : items;
+};
+var getAlbums = function(f) {
+//	f([ {no:1, name:"a"}, {no:2, name:"b"}, {no:3, name:"c"} ]);
+	var url = "http://sabae.club/ccphoto/list2.xml";
+	getXMLJSON(url, function(data) {
+//		dump(data);
+		var list = toArray(data.lists.list);
+		for (var i = 0; i < list.length; i++) {
+			var ls = list[i];
+			var l = ls.url;
+			var name = l.substring(l.lastIndexOf('/') + 1, l.length - 4);
+			ls.name = name;
+			ls.day = name.substring(4, 6) + "/" + name.substring(6, 8) + " " + name.substring(8, 10) + ":" + name.substring(10, 12) + ":" + name.substring(12, 14);
+		}
+		f(list);
+	});
+};
+var getAlbumImages = function(url, f) {
+	/*
+	f([
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" }
+	]);
+	*/
+	getXMLJSON(url, function(data) {
+//		dump(data);
+//		return;
+		var items = data.items.item;
+		items = items == undefined ? [] : items.length === undefined ? [ items ] : items;
+		for (var i = 0; i < items.length; i++) {
+			var l = items[i];
+			l.thumbnail = getResizedImageURL(l.url, 40, 34)
+		}
+		f(items);
+	});
+};
+
+// xml
+var getXMLJSON = function(url, callback) {
+	var host = "fukuno.jig.jp";
+	var cnv = "xml2json";
+	var base = "http://" + host + "/proxy/ITqT5WkhCf2yn1s9?cnv=" + cnv;
+	var url2 = base + "&cache=no&callback=" + getCallbackMethod(callback) + "&url=" + encodeURI(url);
+	jsonp(url2);
+};
+var getResizedImageURL = function(url, w, h) {
+	var host = "sabae.club";
+	var base = "http://" + host + "/proxy/ITqT5WkhCf2yn1s9?cnv=jpeg-rs-" + w + "x" + h;
+	var url2 = base + "&cache=yes&url=" + encodeURI(url);
+	return url2;
+};
+//--
+
+var selbg = null;
+var selectBackground = function() {
+	/*
+		.selbg
+			.selbgalbum
+			.selbgimg
+	*/
+	var closeBackground = function() {
+		document.body.removeChild(selbg);
+		selbg = null;
+	};
+	if (selbg != null) {
+		closeBackground();
+		return;
+	}
+	var div = create("div");
+	div.className = "selbg";
+	document.body.appendChild(div);
+	selbg = div;
+	getAlbums(function(albums) {
+		var d = create("div");
+		d.className = "selbgalbum";
+		d.textContent = "背景なし";
+		div.appendChild(d);
+		d.onclick = function() {
+			setBackground(null);
+			closeBackground();
+		};
+//		dump(albums);
+		for (var i = albums.length - 1; i >= 0; i--) {
+			var album = albums[i];
+			var d = create("div");
+			d.className = "selbgalbum";
+			d.textContent = album.day + (album.title != null ? " - " + album.title : "");
+			d.d = album;
+			div.appendChild(d);
+			d.onclick = function() {
+				getAlbumImages(this.d.url, function(imgs) {
+					clear(div);
+					for (var i = 0; i < imgs.length; i++) {
+						var img = imgs[i];
+						var d = create("div");
+						d.className = "selbgimg";
+						d.style.backgroundImage = "url(" + img.thumbnail + ")";
+						d.d = img;
+						div.appendChild(d);
+						d.onclick = function() {
+							setBackground(this.d.url);
+							closeBackground();
+						};
+					}
+				});
+			};
+		}
+	});
+};
+
+//-- upload/download
+var upload = function() {
+	var title = prompt("アプリの名前は？");
+	if (title != null) {
+		var prog = editor.getValue();
+		var bgurl = bgimg != null ? bgimg.url : null;
+		var s = "title=" + encodeURIComponent(title) + "&program=" + encodeURIComponent(prog);
+		 if (bgimg != null)
+			s += "&bgimg=" + encodeURIComponent(bgurl);
+//		var url = "http://localhost:8080/ccphoto/createapp/?";
+		var url = "http://sabae.club/ccphoto/createapp/?";
+		url += s + "&callback=" + getCallbackMethod(function() {
+			alert("アプリ「" + title + "」を公開しました");
+		});
+		jsonp(url);
+	}
+};
+var selapp;
+var download = function(parent) {
+	/*
+		.selapp
+			.selappitem
+	*/
+	var div = create("div");
+	div.className = "selapp";
+	parent.appendChild(div);
+	selapp = div;
+	var url = "http://sabae.club/ccphoto/app.xml";
+	getXMLJSON(url, function(data) {
+		var items = toArray(data.apps.app);
+		for (var i = items.length - 1; i >= 0; i--) {
+			var item = items[i];
+			var d = create("div");
+			d.className = "selappitem";
+			d.innerHTML = "<a href=./#" + item.url + ">" + (i + 1) + " " + item.title + " (" + getDay(item.url) + ")" + "</a>";
+//album.day + (album.title != null ? " - " + album.title : "");
+			d.d = item;
+			div.appendChild(d);
+			/*
+			d.onclick = function() {
+				loadProg(this.d.url);
+			};
+			*/
+		}
+	});
+};
+window.onload = function() {
+	download($("main"));
+};
+</script>
+<!--
+<link rel='stylesheet' type='text/css' href='base.css'>
+-->
+<style>
+body {
+	text-align: center;
+	margin: 0px;
+	font-weight: bold;
+	background-color: #eee;
+}
+a:link, a:active, a:hover {
+	color: #444;
+}
+a:visited {
+	color: #977;
+}
+
+h1 {
+	background-color: #ffe3e3;
+	color: #211;
+	padding: 20px;
+	margin: 0px;
+	box-shadow: 0 5px 6px 0px #777;
+}
+.selapp {
+	background: white;
+	box-shadow: 0 5px 6px 0px #777;
+	padding: 10px;
+	margin: 30px;
+}
+.selappitem {
+	font-size: 24px;
+	padding: 5px;
+	text-align: left;
+}
+</style>
+</head>
+<body>
+
+<h1>みんなのアプリ</h1>
+<div id='main'></div>
+
+<hr>
+CC BY <a href=http://sabae.club/>Code for Sabae</a>
+</body>
+</html>

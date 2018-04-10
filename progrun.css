@@ -1,0 +1,401 @@
+@import url(http://fonts.googleapis.com/css?family=Sansita+One);
+@import url(http://fonts.googleapis.com/css?family=Source+Code+Pro:600,900);
+
+body {
+	text-align: center;
+	margin: 0px;
+	font-weight: bold;
+	x-background: white;
+	background: #fee;
+}
+#dleft {
+	x-border: 5px solid black;
+	x-background: #aaa;
+	vertical-align: top;
+	display: inline-block;
+	width: 595px;
+	height: 740px;
+	position: relative;
+}
+#editor {
+	font-family: monospace;
+	x-word-wrap: break-word;
+	width: 568px;
+	height: 434px;
+	font-size: 22px;
+	font-weight: normal;
+	line-height: 25px;
+	margin: 2px 2px 8px 2px;
+	padding: 8px;
+	border: 1px solid black;
+	outline: none;
+	text-align: left;
+	background: #fff;
+	overflow: hidden;
+	font-family:'Source Code Pro', sans-serif;	/* WebFont, LocalFont */
+}
+#dright {
+	vertical-align: top;
+	display: inline-block;
+	x-width: 439px; /* 440px だと特定の新しいiPadでおかしくなる */
+}
+#keypad {
+	display: inline-block;
+	border-left: 1px solid black;
+	border-top: 1px solid black;
+}
+.btn {
+	display: inline-block;
+	background: #eee;
+	width: 45px;
+	height: 44px;
+	line-height: 44px;
+	font-family:'Source Code Pro', sans-serif;	/* WebFont, LocalFont */
+	font-weight: 900;
+	font-size: 20px;
+	user-select: none;
+	-webkit-user-select: none;
+	border-right: 1px solid black;
+	border-bottom: 1px solid black;
+}
+.btnS {
+	display: inline-block;
+	background: #aaa;
+	width: 45px;
+	height: 44px;
+	line-height: 44px;
+	font-family: 'Sansita One', cursive;	/* WebFont, LocalFont */
+	font-weight: 400;
+	font-size: 22px;	/* 20pxだとレイアウトがずれる */
+	user-select: none;
+	-webkit-user-select: none;
+	border-right: 1px solid black;
+	border-bottom: 1px solid black;
+}
+.btnK {
+	color: gray;
+	display: inline-block;
+	background: #eee;
+	width: 45px;
+	height: 44px;
+	line-height: 44px;
+	font-family:'Source Code Pro', sans-serif;	/* WebFont, LocalFont */
+	font-weight: 600;
+	font-size: 20px;
+	user-select: none;
+	-webkit-user-select: none;
+	border-right: 1px solid black;
+	border-bottom: 1px solid black;
+}
+.btnd {
+	display: inline-block;
+	font-size: 20px;
+	background: #eee;
+	width: 50px;
+	height: 50px;
+	line-height: 50px;
+	padding: 0px;
+	user-select: none;
+	-webkit-user-select: none;
+	position: absolute;
+	
+	x-border-radius: 12px;
+	x-box-shadow: 2px 2px 2px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.2) inset;
+	x-background-image: -webkit-linear-gradient(top, rgb(147,147,147) 70%, rgb(100,100,120));
+}
+.btnedit {
+	display: inline-block;
+	color: white;
+	x-background: #fd3a6b;
+	background-color: #e01f30;
+	width: 45px;
+	height: 44px;
+	line-height: 44px;
+	font-family:'Source Code Pro', sans-serif;	/* WebFont, LocalFont */
+	font-weight: 900;
+	font-size: 20px;
+	user-select: none;
+	-webkit-user-select: none;
+}
+#dgame {
+	position: relative;
+	margin: 0px;
+	x-background: #fd3a6b;
+	background-color: #e01f30;
+	height: 748px;
+
+    x-border-radius: 13px;
+	x-box-shadow: 4px 4px 8px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.2) inset;
+	x-background-image: -webkit-linear-gradient(top, rgb(147,35,41) 50%, rgb(196,31,36));
+}
+#title {
+	display: inline-block;
+	position: absolute;
+	font-size: 22px;
+	x-height: 70px;
+	bottom: 8px;
+	right: 20px;
+	x-left: 150px;
+	color: #711;
+	x-padding-top: 20px;
+	line-height: 30px;
+	font-family:'Source Code Pro', sans-serif;	/* WebFont, LocalFont */
+}
+a {
+	text-decoration: none !important;
+}
+#canvas {
+	margin: 24px 12px 12px 12px;
+}
+#dpad {
+	display: block;
+	xborder: 1px solid black;
+	
+	top: 92px;
+	height: 200px;
+	position: relative;
+}
+#up {
+	left: 70px;
+	top: 27px;
+}
+#down {
+	left: 70px;
+	top: 127px;
+}
+#right {
+	left: 120px;
+	top: 77px;
+}
+#left {
+	left: 20px;
+	top: 77px;
+}
+#one {
+	left: 290px;
+	top: 77px;
+}
+#two {
+	left: 360px;
+	top: 77px;
+}
+#reset {
+	left: 210px;
+	top: 77px;
+}
+#helpbtn {
+	left: 12px;
+	top: -100px;
+}
+#reload {
+	display: none;
+	left: 368px;
+	top: 0px;
+}
+#hint {
+	right: 12px;
+	top: -100px;
+}
+#bg {
+	right: 68px;
+	top: -100px;
+}
+#dump {
+	visibility: hidden;
+	position: absolute;
+	left: 500px;
+	top: 0px;
+	background: white;
+	border: 1px solid black;
+	color: black;
+	font-size: 20px;
+	line-height: 24px;
+	width: 200px;
+	height: 40px;
+	xoverflow: scroll;
+	x-z-index: 10;
+}
+#helpframe {
+	word-break: break-all;
+	position: absolute;
+	visibility: hidden;
+	text-align: left;
+	font-size: 24px;
+	width: 400px;
+	height: 400px;
+	top: 24px;
+	left: 12px;
+	background: rgba(255, 255, 255, .8);
+	overflow: auto;
+	font-family:'Source Code Pro', sans-serif;	/* WebFont, LocalFont */
+}
+#cls {
+	position: absolute;
+	right: 20px;
+	top: 400px;
+}
+#save {
+	position: absolute;
+	right: 120px;
+	top: 400px;
+}
+#load {
+	position: absolute;
+	right: 70px;
+	top: 400px;
+}
+
+/** selectBackground **/
+.selbg {
+	position: absolute;
+	top: 24px;
+	left: 12px;
+	width: 400px;
+	height: 400px;
+	font-size: 20px;
+	background-color: white;
+	overflow: scroll;
+	text-align: left;
+}
+.selbgalbum {
+	margin: 10px;
+	text-align: left;
+	background-color: #fdd;
+	x-border-radius: 4px;
+	padding: 10px;
+}
+.selbgimg {
+	display: inline-block;
+	margin: 10px 0px 0px 10px;
+	width: 68px;
+	height: 68px;
+	background-size: 100%;
+	background-position: center center;
+}
+.selbgimg2 {
+	display: inline-block;
+	margin: 10px 0px 0px 10px;
+	width: 68px;
+	height: 68px;
+	background-size: auto 100%;
+	background-position: center center;
+}
+/** select download **/
+.selapp {
+	position: absolute;
+	top: 24px;
+	left: 12px;
+	width: 400px;
+	height: 400px;
+	background-color: white;
+	overflow: scroll;
+	text-align: left;
+}
+.selappitem {
+	margin: 10px;
+	text-align: left;
+	background-color: #fdd;
+	x-border-radius: 4px;
+	padding: 10px;
+}
+.selappsearch {
+	margin: 10px;
+	padding: 0px;
+}
+.selappsearchbox {
+	margin: 0px;
+	font-size: 22px;
+	text-align: left;
+	padding: 4px;
+	width: 100%;
+	box-sizing: border-box;
+}
+@media screen and (max-width: 440px) {
+	#canvas {
+		width: 320px;
+		height: 320px;
+		margin: 0px;
+	}
+	.selapp, .selbg, #helpframe {
+		margin: 0px;
+		top: 0px;
+		left: 0px;
+		width: 320px;
+		height: 320px;
+		font-size: 16px;
+	}
+	#dright {
+		width: 320px;
+	}
+	#dleft {
+		width: 320px;
+	}
+	#editor {
+		width: 320px;
+		height: 600px;
+		margin: 54px 0px 0px 0px;
+		padding: 0px;
+		border: none;
+	}
+	#keypad {
+		display: none;
+	}
+	#dgame {
+		height: 496px;
+	}
+	#up {
+		left: 70px;
+		top: -77px;
+	}
+	#down {
+		left: 70px;
+		top: 23px;
+	}
+	#right {
+		left: 120px;
+		top: -27px;
+	}
+	#left {
+		left: 20px;
+		top: -27px;
+	}
+	#one {
+		left: 202px;
+		top: -27px;
+	}
+	#two {
+		left: 258px;
+		top: -27px;
+	}
+	#reset {
+		left: 144px;
+		top: -94px;
+	}
+	#helpbtn {
+		left: 2px;
+		top: -94px;
+	}
+	#hint {
+		left: 268px;
+		top: -94px;
+	}
+	#bg {
+		left: 216px;
+		top: -94px;
+	}
+	#cls {
+		position: absolute;
+		right: 10px;
+		top: 4px;
+	}
+	#save {
+		position: absolute;
+		right: 110px;
+		top: 4px;
+	}
+	#load {
+		position: absolute;
+		right: 60px;
+		top: 4px;
+	}
+}

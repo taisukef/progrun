@@ -1,0 +1,1512 @@
+<!DOCTYPE html><html xmanifest="progrun.manifest"><head><meta charset='utf-8'/>
+<title>progrun</title>
+<meta property="og:image" content="progrun.png"/>
+<link rel="apple-touch-icon" href="progrun.png"/>
+<link rel="manifest" href="manifest.json">
+
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<meta name="format-detection" content="telephone=no"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, user-scalable=no"/> 
+<link rel='stylesheet' type='text/css' href='base.css'/>
+<link rel='stylesheet' type='text/css' href='progrun.css'/>
+<script src='util.js'></script>
+<script>"use strict";
+navigator.serviceWorker.register("serviceworker.js", { scope: "./" });
+
+var mobiles = [ "iPad", "iPhone", "iPod", "Android" ];
+var mobile = false;
+var ipad = false;
+for (var i = 0; i < mobiles.length; i++) {
+	if (navigator.userAgent.indexOf(mobiles[i]) >= 0) {
+		mobile = true;
+		ipad = mobiles[i] == "iPad";
+		break;
+	}
+}
+//ipad = true;
+
+var useta = !ipad;
+
+// useta = true;
+//useta = false;
+
+var toArray = function(items) {
+	return items == undefined ? [] : items.length === undefined ? [ items ] : items;
+};
+var cc2club = function(s) {
+	if (s.startsWith("http://sabae.cc/"))
+		 return "http://sabae.club/" + s.substring("http://sabae.cc/".length);
+	return s;
+};
+
+var getAlbums = function(f) {
+//	f([ {no:1, name:"a"}, {no:2, name:"b"}, {no:3, name:"c"} ]);
+	var url = "http://sabae.club/ccphoto/list2.xml";
+	getXMLJSON(url, function(data) {
+//		dump(data);
+		var list = toArray(data.lists.list);
+		for (var i = 0; i < list.length; i++) {
+			var ls = list[i];
+			ls.url = cc2club(ls.url);
+			var l = ls.url;
+			var name = l.substring(l.lastIndexOf('/') + 1, l.length - 4);
+			ls.name = name;
+			ls.day = name.substring(4, 6) + "/" + name.substring(6, 8) + " " + name.substring(8, 10) + ":" + name.substring(10, 12) + ":" + name.substring(12, 14);
+		}
+		f(list);
+	});
+};
+var getAlbumImages = function(url, f) {
+	/*
+	f([
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" },
+		{no:1, name:"bg.jpg" }
+	]);
+	*/
+	getXMLJSON(url, function(data) {
+//		dump(data);
+//		return;
+		var items = data.items.item;
+		items = items == undefined ? [] : items.length === undefined ? [ items ] : items;
+		for (var i = 0; i < items.length; i++) {
+			var l = items[i];
+			l.url = cc2club(l.url);
+			l.thumbnail = getResizedImageURL(l.url, 40, 34)
+		}
+		f(items);
+	});
+};
+
+// xml
+var getXMLJSON = function(url, callback) {
+	var host = "fukuno.jig.jp";
+	if (url.startsWith("http://localhost:8080/")) {
+		host = "localhost:8080";
+	}
+	var cnv = "xml2json";
+	var base = "http://" + host + "/proxy/ITqT5WkhCf2yn1s9?cnv=" + cnv;
+	var url2 = base + "&cache=no&callback=" + getCallbackMethod(callback) + "&url=" + encodeURI(url);
+	jsonp(url2);
+};
+var getResizedImageURL = function(url, w, h) {
+	var host = "sabae.club";
+	var base = "http://" + host + "/proxy/ITqT5WkhCf2yn1s9?cnv=jpeg-rs-" + w + "x" + h;
+	var url2 = base + "&cache=yes&url=" + encodeURI(url);
+	return url2;
+};
+//--
+var getSabakan = function(callback) {
+	var url = "http://www3.city.sabae.fukui.jp/xml/sabakan/sabakan.xml";
+	getXMLviaJSON(url, function(data) {
+//		dump(data);
+		callback(data.dataroot.sabakan);
+	});
+};
+var sabae100 = null;
+var getSabae100 = function(callback) {
+	if (sabae100) {
+		callback(sabae100);
+		return;
+	}
+	/*
+	var url = "http://www3.city.sabae.fukui.jp/ls/landscape.xml";
+	getXMLviaJSON(url, function(data) {
+//		dump(data);
+		sabae100 = data.dataroot.landscape;
+		for (var i = 0; i < sabae100.length; i++)
+			sabae100[i].thumbnail = getResizedImageURL(sabae100[i].imageurl, 100, 100)
+		callback(sabae100);
+	});
+	*/
+	var limit = 300;
+	// http://purl.org/jrrk#CivicFacility http://purl.org/jrrk#CivicPOI
+	var query = f2s(function() {/*
+		select ?uri ?img ?lat ?lng ?name {
+			?uri <http://schema.org/image> ?img;
+			<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://purl.org/jrrk#CivicPOI>;
+			<http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat;
+			<http://www.w3.org/2003/01/geo/wgs84_pos#long> ?lng;
+			<http://www.w3.org/2000/01/rdf-schema#label> ?name
+		} limit
+	*/}) + limit;
+	var url = "?query=" + encodeURIComponent(query) + "&output=json";
+	var func = function(data) {
+		var items = data.results.bindings;
+		items = getValuesRDF(items);
+//		dump(items);
+		sabae100 = items;
+		for (var i = 0; i < sabae100.length; i++)
+			sabae100[i].thumbnail = getResizedImageURL(sabae100[i].img, 100, 100)
+		callback(sabae100);
+	};
+	url += "&callback=" + getCallbackMethod(func);
+	var baseurl = "http://sparql.odp.jig.jp/data/sparql";
+	jsonp(baseurl + url);
+	
+};
+var f2s = function(f) {
+	return f.toString().match(/\n([\s\S]*)\n/)[1];
+};
+var getValuesRDF = function(data) {
+	var res = [];
+	for (var i = 0; i < data.length; i++) {
+		var d = data[i];
+		var d2 = {};
+		for (var name in d) {
+			d2[name] = d[name].value;
+		}
+		res.push(d2);
+	}
+	return res;
+};
+var fukui100 = null;
+var getFukui100 = function(callback) {
+	if (fukui100) {
+		callback(fukui100);
+		return;
+	}
+	var url = "http://sabae.club/data/fukuihyakkei/fukuihyakkei.js";
+	window.csv2jsonp_fukuihyakkei = function(data) {
+		var items = [];
+		for (var i = 1; i < data.length; i++) {
+			var d = data[i];
+			var img = d[6];
+			if (img && img.length > 0) {
+				items.push({
+					imageurl: img,
+					thumbnail: getResizedImageURL(img, 100, 100)
+				});
+			}
+		}
+//		alert(items.length);
+		callback(fukui100 = items);
+	};
+	jsonp(url);
+};
+
+var getXMLviaJSON = function(url, callback) {
+//	var host = "fukuno.jig.jp";
+	var host = "sabae.club";
+	if (url.startsWith("http://localhost:8080/")) {
+		host = "localhost:8080";
+	}
+	var base = "http://" + host + "/proxy/ITqT5WkhCf2yn1s9?cnv=xml2json";
+	var url2 = base + "&cache=no&callback=" + getCallbackMethod(callback) + "&url=" + encodeURI(url);
+	jsonp(url2);
+};
+var jsonp = function(url) {
+	var head = document.getElementsByTagName("head")[0];
+   	var script = document.createElement("script");
+    script.setAttribute("src", url);
+    script.setAttribute("type", "text/javascript");
+//	script.setAttribute("id", 'jsonp');
+	head.appendChild(script);
+};
+
+// --
+var selbg = null;
+var selectBackground = function() {
+	/*
+		.selbg
+			.selbgalbum
+			.selbgimg
+	*/
+	var base = get("dgame");
+	var closeBackground = function() {
+		base.removeChild(selbg);
+		selbg = null;
+	};
+	if (selbg != null) {
+		closeBackground();
+		return;
+	}
+	var div = create("div");
+	div.className = "selbg";
+	base.appendChild(div);
+	selbg = div;
+	getAlbums(function(albums) {
+		var d = create("div");
+		d.className = "selbgalbum";
+		d.textContent = "背景なし";
+		div.appendChild(d);
+		d.onclick = function() {
+			setBackground(null);
+			closeBackground();
+		};
+		
+		// 鯖江オープンデータ
+		var d = create("div");
+		d.className = "selbgalbum";
+//		d.textContent = "さばかん by データシティ鯖江";
+		d.textContent = "鯖江百景 by データシティ鯖江 (odp)";
+		div.appendChild(d);
+		d.onclick = function() {
+			getSabae100(function(data) {
+				clear(div);
+				for (var i = 0; i < data.length; i++) {
+					var item = data[i];
+					var img = item.simage || item.imageurl || item.img;
+					var d = create("div");
+					d.className = "selbgimg2";
+					d.style.backgroundImage = "url(" + item.thumbnail + ")";
+					d.d = img;
+					div.appendChild(d);
+					d.onclick = function() {
+						setBackground(this.d);
+						closeBackground();
+					};
+				}
+			});
+		};
+		
+		// 福井県オープンデータ
+		for (var i = 0; i < 4; i++) {
+			var d = create("div");
+			d.className = "selbgalbum";
+			d.textContent = "福井百景" + (i + 1) + " by 福井県オープンデータ";
+			div.appendChild(d);
+			d.off = i * 90;
+			d.len = 90;
+			d.onclick = function() {
+				var off = this.off;
+				var len = this.len;
+//				alert(off + " " + len);
+				getFukui100(function(data) {
+	//			dump(data);
+					clear(div);
+					for (var i = off; i < Math.min(off + len, data.length); i++) {
+						var item = data[i];
+						var img = item.simage || item.imageurl;
+						var d = create("div");
+						d.className = "selbgimg2";
+						d.style.backgroundImage = "url(" + item.thumbnail + ")";
+						d.d = img;
+						div.appendChild(d);
+						d.onclick = function() {
+							setBackground(this.d);
+							closeBackground();
+						};
+					}
+				});
+			};
+		}
+		
+//		dump(albums);
+		for (var i = albums.length - 1; i >= 0; i--) {
+			var album = albums[i];
+			var d = create("div");
+			d.className = "selbgalbum";
+			d.textContent = album.day + (album.title != null ? " - " + album.title : "");
+			d.d = album;
+			div.appendChild(d);
+			d.onclick = function() {
+				getAlbumImages(this.d.url, function(imgs) {
+					clear(div);
+					for (var i = 0; i < imgs.length; i++) {
+						var img = imgs[i];
+						var d = create("div");
+						d.className = "selbgimg";
+						d.style.backgroundImage = "url(" + img.thumbnail + ")";
+						d.d = img;
+						div.appendChild(d);
+						d.onclick = function() {
+							setBackground(this.d.url);
+							closeBackground();
+						};
+					}
+				});
+			};
+		}
+	});
+};
+
+//-- upload/download
+var upload = function() {
+	for (;;) {
+		var title = prompt("アプリの名前は？（20文字以内）");
+		if (title == null)
+			return;
+		title = title.trim();
+		if (title.length > 20) {
+			alert("名前は20文字以内でつけてね");
+			continue;
+		}
+		var prog = editor.getValue();
+		var bgurl = bgimg != null ? bgimg.url : null;
+		var s = "title=" + encodeURIComponent(title) + "&program=" + encodeURIComponent(prog);
+		 if (bgimg != null)
+			s += "&bgimg=" + encodeURIComponent(bgurl);
+//		var url = "http://localhost:8080/ccphoto/createapp/?";
+		var url = "http://sabae.club/ccphoto/createapp/?";
+		url += s + "&callback=" + getCallbackMethod(function() {
+			alert("アプリ「" + title + "」を公開しました");
+		});
+//		alert(url);
+		jsonp(url);
+		break;
+	}
+};
+var selapp;
+var selappkey = "";
+var download = function() {
+	/*
+		.selapp
+			.selappitem
+	*/
+//	var base = document.body;
+	var base = get("dgame");
+	var closeDownload = function() {
+		base.removeChild(selapp);
+		selapp = null;
+	};
+	if (selapp != null) {
+		closeDownload();
+		return;
+	}
+	var div = create("div");
+	div.className = "selapp";
+	base.appendChild(div);
+	selapp = div;
+	var url = "http://sabae.club/ccphoto/app.xml";
+//	var url = "http://localhost:8080/fukunojigjp/temp/progrun-app.xml";
+	getXMLJSON(url, function(data) {
+		var search = create("div");
+		search.className = "selappsearch";
+		div.appendChild(search);
+		var searchbox = create("input");
+		searchbox.className = "selappsearchbox";
+		search.appendChild(searchbox);
+		searchbox.value = selappkey;
+		
+		var items = toArray(data.apps.app);
+		for (var i = items.length - 1; i >= 0; i--) {
+			var item = items[i];
+			var d = create("div");
+			d.className = "selappitem";
+			var s = item.title;
+			if (s.length > 20)
+				s = s.substring(0, 20);
+			d.textContent = s;
+//album.day + (album.title != null ? " - " + album.title : "");
+			d.d = item;
+			div.appendChild(d);
+			d.onclick = function() {
+				loadProg(cc2club(this.d.url));
+				closeDownload();
+			};
+			item.div = d;
+		}
+		
+		var f = function() {
+			var key = selappkey = searchbox.value;
+			for (var i = items.length - 1; i >= 0; i--) {
+				var item = items[i];
+				var s = item.title;
+				if (s.length > 20)
+					s = s.substring(0, 20);
+				if (key.length == 0 || s.indexOf(key) >= 0) {
+					item.div.style.display = "block";
+				} else {
+					item.div.style.display = "none";
+				}
+			}
+		};
+		searchbox.onchange = searchbox.onkeyup = f;
+		f();
+	});
+};
+
+//
+var getScrollPane = function() {
+	if (selbg != null)
+		return selbg;
+	if (selapp != null)
+		return selapp;
+	if ($('helpframe').style.visibility == "visible")
+		return $('helpframe');
+	return null;
+}
+
+//
+var createTextarea = function(id) {
+	if (useta) {
+		var ta;
+		if (id != null) {
+			ta = $(id);
+			var ta2 = create('textarea');
+			ta.parentElement.replaceChild(ta2, ta);
+			ta2.id = id;
+			ta = ta2;
+		} else
+			ta = create('textarea');
+		ta.setValue = function(s) {
+			if (s != null)
+				this.value = s;
+		};
+		ta.getValue = function() {
+			return this.value;
+		}
+		ta.setCursorPos = function(n) {
+			if (n < 0)
+				n = 0;
+			if (n > this.getValue().length)
+				n = this.getValue().length;
+			this.selectionStart = this.selectionEnd = n;
+		};
+		ta.getCursorPos = function() {
+			return this.selectionStart;
+		};
+		return ta;
+	}
+	// original textarea
+	var ta;
+	if (id != null)
+		ta = $(id);
+	else
+		ta = create('div');
+	var cursor = create('div');
+	cursor.style.position = 'absolute';
+	cursor.style.display = 'block';
+	cursor.style.background = 'blue'; //black';
+	cursor.style.posLeft = 0;
+	cursor.style.posTop = 0;
+	cursor.style.posHeight = 25;
+	cursor.style.posWidth = 3;
+	ta.parentElement.appendChild(cursor);
+	ta.cursor = cursor;
+	
+	var input = create('div');
+	
+	ta.setValue = function(s) {
+		if (s == null)
+			return;
+		var ss = s.split('\n');
+		var s2 = [];
+		for (var i = 0; i < ss.length; i++) {
+			s2.push(encodeHTML(ss[i]));
+			s2.push('<br>');
+		}
+		this.innerHTML = s2.join('');
+		if (this.ncursor > s.length - 1)
+			this.setCursorPos(s.length - 1);
+	};
+	ta.getValue = function() {
+		var ss = this.innerHTML.split('<br>');
+		var s2 = [];
+		for (var i = 0; i < ss.length; i++) {
+			s2.push(decodeHTML(ss[i]));
+			s2.push('\n');
+		}
+		return s2.join('');
+	};
+	ta.ncursor = 0;
+	ta.getCursorPos = function() {
+		return this.ncursor;
+	};
+	ta.getCursorPosX = function() {
+		return this.ncursorx;
+	};
+	ta.getCursorPosY = function() {
+		return this.ncursory;
+	};
+	ta.setCursorPos = function(n) {
+		var s = this.getValue();
+		if (n < 0)
+			n = 0;
+		if (n > s.length - 1)
+			n = s.length - 1;
+		this.ncursor = n;
+		
+		var x = 0;
+		if (n > 0)
+			x = s.lastIndexOf('\n', n - 1) + 1;
+		x = n - x;
+		var y = 0;
+		var idx = 0;
+		for (;;) {
+			var m = s.indexOf('\n', idx);
+			if (m < 0 || m >= n)
+				break;
+			y++;
+			idx = m + 1;
+		}
+		this.ncursorx = x;
+		this.ncursory = y;
+		
+		
+//		setDump("xy = " + n + ", " + x + ", " + y);
+		this.ncursor = n;
+		var fx = 8;
+		var fy = 10;
+		var fw = 13.2;
+		var fh = 25;
+		var cx = x * fw + fx;
+		var cy = y * fh + fy;
+		
+		
+//		debug(cy + " " + this.scrollHeight + " " + this.offsetHeight);
+		if (cy > this.offsetHeight - fh)
+			this.scrollTop = cy - (this.offsetHeight - fh);
+		else
+			this.scrollTop = 0;
+//		else if (cy < this.scrollTop)
+//			this.scrollTop = cy;
+
+//		this.cursor.style.visibility = (cx > 534 - 3 || cy > 424) ? "hidden" : "visible";
+//		this.cursor.style.visibility = "visible";
+/*
+	width: 534px;
+	height: 424px;
+*/
+		this.cursor.style.posLeft = this.offsetLeft + cx;
+		this.cursor.style.posTop = this.offsetTop + cy - this.scrollTop;
+	};
+	ta.setCursorPos(0);
+	
+	/*
+	// touch 対応
+	ta.ontouchstart = function(e) {
+		var x = e.touches[0].pageX;
+		var y = e.touches[0].pageY;
+		this.scbky = y;
+	};
+	ta.ontouchmove = function(e) {
+		var x = e.touches[0].pageX;
+		var y = e.touches[0].pageY;
+		this.scrollTop += y - this.scbky;
+	};
+	*/
+	return ta;
+}
+var setDump = function(s) {
+	$('dump').style.visibility = 'visible';
+	$('dump').textContent = s;
+};
+var encodeHTML = function(s) {
+	s = s.replace(/&/g, '&amp;');
+	s = s.replace(/</g, '&lt;');
+	s = s.replace(/>/g, '&gt;');
+	return s;
+};
+var decodeHTML = function(s) {
+	s = s.replace(/&lt;/g, '<');
+	s = s.replace(/&gt;/g, '>');
+	s = s.replace(/&amp;/g, '&');
+	return s;
+};
+window.onload = function() {
+//	update();
+//	makeHelp();
+	editor = createTextarea('editor');
+	makeKeyboard();
+	initProgrun();
+};
+var editor;
+var makeKeyboard = function() {
+	var key = [
+		"!\"#$%&'()=-/", //  \\
+		"1234567890+*",　// @^
+		"qwertyuiop[]",
+		"asdfghjkl;{}",
+		"zxcvbnm,.B↑R",
+		"@|<>　?:^\\←↓→", // なし _ [ ] { } ~ `
+	];
+	var keyS = [	// differenct color
+		'B','↑','R','←','↓','→'
+	];
+	var keyM = [	// differenct color
+		'!','\"','#','$','%','&',"'",'=','-','/',
+		'+','*',
+		'[',']',
+		';','{','}','.',
+		'@','|','<','>','?',':','^','\\'
+	];
+	/*
+	setInterval(function() {
+		$('dump').textContent = $('editor').selectionStart;
+	}, 100);
+	*/
+	for (var i = 0; i < key.length; i++) {
+		for (var j = 0; j < key[i].length; j++) {
+			var c = key[i].charAt(j);
+			var btn = create('div');
+			if (keyS.indexOf(c) < 0) {
+				if (keyM.indexOf(c) < 0) {
+					btn.className = "btn";
+				} else {
+					btn.className = "btnK";
+				}
+			} else {
+				btn.className = "btnS";
+			}
+			btn.textContent = c;
+			btn.ch = c;
+			if (mobile) {
+				btn.handleClick = handleClick;
+				btn.ontouchstart = function(e) {
+					this.handleClick(e);
+					this.style.background = '#f00';
+				};
+				btn.ontouchend = function(e) {
+					if (this.className == 'btnS')
+						this.style.background = '#aaa';
+					else
+						this.style.background = '#eee';
+				};
+			} else {
+				btn.handleClick = handleClick;
+				btn.onmousedown = function(e) {
+					this.handleClick(e);
+					this.style.background = '#f00';
+				};
+				btn.onmouseup = function(e) {
+					if (this.className == 'btnS')
+						this.style.background = '#aaa';
+					else
+						this.style.background = '#eee';
+				};
+			};
+			$('keypad').appendChild(btn);
+		}
+		$('keypad').appendChild(create('br'));
+	}
+	var btns = [ "up", "down", "right", "left", "one", "two" ];
+	for (var i = 0; i < btns.length; i++) {
+		var btn = btns[i];
+		$(btn).ch = $(btn).textContent;
+		if (mobile) {
+			$(btn).ontouchstart = function() {
+				window[this.id] = true;
+				if (this.id == "down" || this.id == "up") {
+					var sc = getScrollPane();
+					if (sc != null) {
+						sc.scrollTop += this.id == "down" ? 60 : -60;
+					}
+				}
+//				this.style.background = '#f00';
+			};
+			$(btn).ontouchend = function() {
+				window[this.id] = false;
+//				this.style.background = '#eee';
+			};
+		} else {
+			$(btn).onmousedown = function() {
+				window[this.id] = true;
+	//			alert(window[this.id] + " " + this.id);
+	//			one = true;
+				if (this.id == "down" || this.id =="up") {
+					var sc = getScrollPane();
+					if (sc != null) {
+						sc.scrollTop += this.id == "down" ? 60 : -60;
+					}
+				}
+			};
+			$(btn).onmouseup = function() {
+				window[this.id] = false;
+	//			one = false;
+			};
+			$(btn).onmouseout = function() {
+				window[this.id] = false;
+	//			one = false;
+			};
+		}
+	}
+//	var f = mobile ? 'ontouchstart' : 'onclick'; // iOS8のホーム画面で落ちる！
+	f = "onclick";
+	$('reset')[f] = function() {
+		resetVar();
+	};
+	$('reload')[f] = function() {
+		location.reload();
+	};
+	$('hint')[f] = function() {
+		gridhint = !gridhint;
+	};
+	$('bg')[f] = function() {
+		selectBackground();
+	};
+	$('helpbtn')[f] = function() {
+		var c = $('canvas');
+		var h = $('helpframe');
+		h.style.posLeft = c.offsetLeft;
+		h.style.posTop = c.offsetTop;
+		h.style.visibility = h.style.visibility == 'visible' ? 'hidden' : 'visible';
+	};
+	$('cls')[f] = function() {
+		if (confirm('ぜんぶ、けしちゃいますよ？')){
+			$('editor').setValue("");
+			resetVar();
+		}
+	};
+	$('save')[f] = function() {
+		upload();
+//		alert("保存");
+	};
+	$('load')[f] = function() {
+		download();
+//		alert("読み込み");
+	};
+};
+
+var handleClick = function(e) {
+	var ta = editor;
+	var s = ta.getValue();
+	var n = ta.getCursorPos();
+	var ch = this.ch;
+	if (ch == 'B') {
+		s = s.substring(0, n - 1) + s.substring(n);
+		ta.setValue(s);
+		ta.setCursorPos(n - 1);
+	} else if (ch == '←') {
+		ta.setCursorPos(ta.getCursorPos() - 1);
+	} else if (ch == '→') {
+		ta.setCursorPos(ta.getCursorPos() + 1);
+	} else if (ch == '↑') {
+		var n1 = s.lastIndexOf('\n', n - 1);
+		if (n1 >= 0) {
+			var ox = n - n1;
+			var n2 = s.lastIndexOf('\n', n1 - 1);
+			n = n2 + ox;
+			if (n >= n1)
+				n = n1;
+		}
+		ta.setCursorPos(n);
+	} else if (ch == '↓') {
+		/*
+		for (var i = 0; i < s.length; i++)
+			alert(i + "/" + s.length + ": " + s.charAt(i));
+		*/
+		var n1 = -1;
+		if (n > 0)
+			n1 = s.lastIndexOf('\n', n - 1);
+		var ox = n - n1 - 1;
+		var n2 = s.indexOf('\n', n);
+		if (n2 >= 0) {
+			n = n2 + ox + 1;
+			var n3 = s.indexOf('\n', n2 + 1);
+			if (n3 < 0)
+				n3 = s.length;
+			if (n > n3)
+				n = n3;
+		}
+		ta.setCursorPos(n);
+	} else if (ch == 'R') {
+		s = s.substring(0, n) + '\n' + s.substring(n);
+		ta.setValue(s);
+		ta.setCursorPos(n + 1);
+	} else if (ch == '　') {
+		s = s.substring(0, n) + ' ' + s.substring(n);
+		ta.setValue(s);
+		ta.setCursorPos(n + 1);
+	} else {
+		s = s.substring(0, n) + ch + s.substring(n);
+		ta.setValue(s);
+		ta.setCursorPos(n + 1);
+	}
+};
+
+// progrun main
+
+var editor;
+var canvas;
+var ctx;
+
+var loadProg = function(url) {
+	getXMLJSON(url, function(data) {
+		document.location.hash = "#" + url;
+//			dump(data);
+		setProg(data.app.program, data.app.bgimg);
+	});
+};
+var initProgrun = function() {
+	editor = $('editor');
+	canvas = $('canvas');
+	ctx = canvas.getContext('2d');
+	
+	var hash = document.location.hash;
+	if (hash.length > 1) {
+		var url = hash.substring(1);
+//		alert(url);
+		loadProg(url);
+	} else {
+		load();
+	}
+	setInterval(autosave, 3000);
+	
+	runProg();
+}
+// 自動保存用の関数
+var filename = 'progban-main';
+var bkdata;
+function load() {
+	setProg(localStorage.getItem(filename), localStorage.getItem(filename + "-bgurl"));
+};
+var setProg = function(prog, bgurl) {
+	resetVar();
+	editor.setValue(prog);
+	setBackground(bgurl);
+};
+var setBackground = function(bgurl) {
+	if (bgurl != null) {
+		bgurl = cc2club(bgurl);
+		bgimg = new Image();
+		bgimg.src = bgurl;
+		bgimg.url = bgurl;
+		gridhint = false;
+	} else {
+		bgimg = null;
+		gridhint = true;
+	}
+};
+var autosave = function() {
+	var s = editor.getValue() + (bgimg != null ? bgimg.url : "");
+	if (s != bkdata) {
+		localStorage.setItem(filename, editor.getValue());
+		if (bgimg) {
+			localStorage.setItem(filename + "-bgurl", bgimg.url);
+		} else {
+			localStorage.removeItem(filename + "-bgurl");
+		}
+		bkdata = s;
+	}
+};
+var timerid = null;
+
+var runProg = function() {
+	resetVar();
+	
+	if (timerid != null)
+		clearInterval(timerid);
+	drawCanvas();
+	timerid = setInterval(function() {
+		drawCanvas();
+	}, 100);
+};
+var a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z;
+var one, two, up, down, left, right;
+var cx, cy;
+var ox, oy;
+var resetVar = function() { // 変数初期化　グローバル変数を用意する
+    a = b = c = d = e = f = g = h = i = j = k = l = m = n = o = p = q = r = s = t = u = v = w = x = y = z = 0;
+	cx = cy = 0; // cursor auto x, y
+	ox = oy = 0; // orgiin
+    one = two = up = down = left = right = false;
+	
+    t = 0; // 実行時からのフレーム数（1フレーム100msec）
+};
+var bkeditor;
+var gridhint = true;
+var bgimg = null;
+
+var drawCanvas = function() {
+	setSize(8);
+	initCanvas();
+	
+	if (gridhint) {
+		drawGrid();
+		drawGrid10(); // 補助線を引く
+	}
+	try {
+		if (editor.getValue() != bkeditor) {
+			bkeditor = checkCode(editor.getValue());
+		}
+		ox = oy = 0;
+		cx += (left ? -1 : 0) + (right ? 1 : 0);
+		cy += (up ? -1 : 0) + (down ? 1 : 0);
+		eval(bkeditor);
+		t++;
+	} catch (e) {
+	}
+};
+/*
+^ *rect\([0-9a-z=<>!&^|+-/*%?,.: ]+,[0-9?,.a-z: ]+,[0-9?,.a-z: ]+,[0-9?,.a-z: ]+\)$
+
+^ *rect\(,[0-9?,.a-z: ]+,[0-9?,.a-z: ]+,[0-9?,.a-z: ]+\)$
+
+^ *[a-z] *[(+=)|(-=)|(/=)|(\*=)|(%=)|(&=)|(|=)|(^=)]
+*/
+//var EXP = "[\"0-9a-z=<>!&\\^\\|+\\-/\\*%\\?,\\.:\\(\\)\\[\\] ]+";
+var EXP = "[\"0-9a-zA-Z=<>!&\\^\\|+\\-/\\*%\\?,\\.:\\(\\)\\[\\] ]+";
+//var EXP2 = "[\"0-9a-zA-Z]+";
+
+var CODE = [
+	new RegExp("^ *color\\(" + EXP + "\\)$"),
+	new RegExp("^ *rect\\(" + EXP + "," + EXP + "," + EXP + "," + EXP + "\\)$"),
+	new RegExp("^ *circle\\(" + EXP + "," + EXP + "," + EXP + "\\)$"),
+	new RegExp("^ *line\\(" + EXP + "," + EXP + "," + EXP + "," + EXP + "\\)$"),
+	new RegExp("^ *origin\\(" + EXP + "," + EXP + "\\)$"),
+	new RegExp("^ *stamp\\(" + EXP + "," + EXP + "," + EXP + "\\)$"),
+	new RegExp("^ *rgb\\(" + EXP + "," + EXP + "," + EXP + "\\)$"),
+	new RegExp("^ *rgba\\(" + EXP + "," + EXP + "," + EXP + "," + EXP + "\\)$"),
+	new RegExp("^ *hue\\(" + EXP + "\\)$"),
+	new RegExp("^ *hsv\\(" + EXP + "," + EXP + "," + EXP + "\\)$"),
+	new RegExp("^ *hsva\\(" + EXP + "," + EXP + "," + EXP + "," + EXP + "\\)$"),
+	new RegExp("^ *[a-z] *[(+=)|(\\-=)|(/=)|(\\\*=)|(%=)|(&=)|(\\|=)|(\\^=)]" + EXP + "$")
+];
+var checkCode = function(code) {
+	var ss = code.split('\n');
+	var res = [];
+	for (var i = 0; i < ss.length; i++) {
+		var s = ss[i];
+		for (var j = 0; j < CODE.length; j++) {
+			if (s.match(CODE[j])) {
+				res.push(s);
+				break;
+			}
+		}
+	}
+	return res.join('\n');
+};
+// Canvasの初期化
+var initCanvas = function() {
+	ctx.fillStyle = "rgb(255, 255, 255)";
+	ctx.fillRect(0, 0, 50 * size, 50 * size);
+	ctx.fillStyle = "rgb(0, 0, 0)";
+	ctx.strokeStyle = "rgb(0, 0, 0)";
+	
+	if (bgimg != null) {
+		var w = 50 * size;
+		var iw = bgimg.width;
+		var ih = bgimg.height;
+		var ix = 0;
+		var iy = 0;
+		var iw2 = iw;
+		var ih2 = ih;
+		if (iw > ih) {
+			ix = Math.floor((iw - ih) / 2);
+			iw2 = ih;
+		} else {
+			iy = Math.floor((ih - iw) / 2); // w - w / ih * iw) / 2;
+			ih2 = iw;
+		}
+//		debug(bgimg.url + " " + w + " " + bgimg.width + " " + bgimg.height + " " + ix + " " + iy + " " + iw2 + " " + ih2);
+		ctx.drawImage(bgimg, ix, iy, iw2, ih2, 0, 0, w, w);
+	}
+};
+var drawGrid = function() {
+	ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
+	ctx.beginPath();
+	var mx = size * 50;
+	var my = size * 50;
+	ctx.moveTo(0, 0);
+	ctx.lineTo(0, my);
+	ctx.moveTo(0, 0);
+	ctx.lineTo(mx, 0);
+	for (var i = 1; i <= 50; i++){
+		ctx.moveTo(size * i, 0);
+		ctx.lineTo(size * i, my);
+		ctx.moveTo(0, size * i);
+		ctx.lineTo(mx, size * i);
+	}
+	ctx.closePath();
+	ctx.lineWidth = 2;
+	
+	ctx.stroke();
+	ctx.strokeStyle = "rgba(0, 0, 0, 1)";
+};
+
+// Canvasの補助線
+var drawGrid10 = function() {
+	ctx.strokeStyle = "rgba(0, 0, 0, .3)";
+	ctx.beginPath();
+	for (var i = 10; i < 50; i += 10) {
+		ctx.moveTo(size * i, 0);
+		ctx.lineTo(size * i, size * 50);
+		ctx.moveTo(0, size * i);
+		ctx.lineTo(500, size * i);
+	}
+	ctx.closePath();
+	ctx.lineWidth = 3;
+	
+	ctx.stroke();
+	ctx.strokeStyle = "rgba(0, 0, 0, 1)";
+}
+
+/*
+window.onorientationchange = change;
+//画面の回転によって読み込むcssを変更する。
+var change = function() {
+	switch (window.orientation) {
+        case 0:
+        case 180:	
+        	document.getElementById('bposi').href = "css/portrait.css";
+            break;
+        case 90:
+        case -90:
+            document.getElementById('bposi').href = "css/landscape.css";
+            break;
+    }
+}
+*/
+
+/*
+//cacheファイルを確認して差分がある場合に更新 -> 旧仕様
+var update = function() {
+	if (typeof navigator.onLine != undefined) {
+		if (navigator.onLine) {
+			if (typeof applicationCache != undefined) {
+				applicationCache.onupdateready = function() {
+					location.reload();
+				}
+				try {
+					applicationCache.update();
+				} catch (e) {
+				}
+			}
+		}
+	}
+}
+*/
+//プレビュー時スライド操作を無効, iPadで画面固定
+
+if (ipad) {
+	document.addEventListener("touchmove", function(e) {
+	//	if(document.getElementById("prev").style.display == "block")
+		e.preventDefault();
+	}, false);
+}
+
+//------------------------------------------------------------------
+var size = 10;
+var setSize = function(sz) {
+	size = sz;
+};
+var line = function(x1, y1, x2, y2) {
+	x1 += ox;
+	y1 += oy;
+	x2 += ox;
+	y2 += oy;
+	ctx.beginPath();
+	ctx.moveTo(x1 * size, y1 * size);
+	ctx.lineTo(x2 * size, y2 * size);
+	ctx.closePath();
+	ctx.stroke();
+};
+var circle = function(x, y, r) {
+	x += ox;
+	y += oy;
+	ctx.beginPath();
+ 	ctx.arc(x * size, y * size, r * size, 0, Math.PI * 2, false);
+ 	ctx.closePath();
+  	ctx.fill();
+};
+var rect = function(x, y, w, h) {
+	x += ox;
+	y += oy;
+	ctx.fillRect(x * size, y * size, w * size, h * size);
+}
+var origin = function(x, y) {
+	ox = x;
+	oy = y;
+}
+var polygon = function(x, y) {
+	ctx.beginPath();
+	ctx.moveTo(x * size, y * size);
+	for(var i = 2; i < arguments.length; i += 2){
+		ctx.lineTo(arguments[i] * size, arguments[i + 1] * size);
+	}
+	ctx.lineTo(x * size, y * size);
+	ctx.closePath();
+	ctx.fill();
+}
+var hue = function(h) {
+	hsva(h, 1, 1, 1);
+};
+var hsv = function(h, s, v) {
+	hsva(h, s, v, 1);
+};
+var hsva = function(h, s, v, a) {
+	var c = hsv2rgb(h, s, v);
+	rgba(c[0], c[1], c[2], a);
+};
+var rgb = function(r, g, b) {
+	rgba(r, g, b, 1);
+};
+var rgba = function(r, g, b, a) {
+	if (r < 0)
+		r = 0;
+	else if (r > 255)
+		r = 255;
+	if (g < 0)
+		g = 0;
+	else if (g > 255)
+		g = 255;
+	if (b < 0)
+		b = 0;
+	else if (b > 255)
+		b = 255;
+	if (a < 0)
+		a = 0;
+	else if (a > 1)
+		a = 1;
+//	var col= "#" + dec2hex(r, 2) + dec2hex(g, 2) + dec2hex(b, 2);
+	var col= "rgba(" + (r >> 0) + "," + (g >> 0) + "," + (b >> 0) + "," + a + ")";
+	ctx.strokeStyle = col;
+	ctx.fillStyle = col;
+};
+var color = function(c) {
+	c = Math.floor(c);
+	var val = ((c >> 3) & 1) == 1 ? 15 : 7;
+	var r = Math.floor(((c >> 2) & 1) * val);
+	var g = Math.floor(((c >> 1) & 1) * val);
+	var b = Math.floor((c & 1) * val);
+	var col= "#" + dec2hex(r, 1) + dec2hex(g, 1) + dec2hex(b, 1);
+	ctx.strokeStyle = col;
+	ctx.fillStyle = col;
+};
+var hex2dec1 = function(c) {
+	return "0123456789abcdef".indexOf(c.toLowerCase());
+};
+var stamp = function(s, x, y) {
+	var len = s.length;
+	stamp4x4(s, x, y);
+	stamp4x4(s.substring(4), x, y + 4);
+	stamp4x4(s.substring(8), x + 4, y);
+	stamp4x4(s.substring(12), x + 4, y + 4);
+};
+var stamp4x4 = function(s, x, y) {
+	for (var i = 0; i < 4 && s.length; i++) {
+		var n = hex2dec1(s.charAt(i));
+		for (var j = 0; j < 4; j++) {
+			if (n & (1 << (3 - j)))
+				rect(x + j, y + i, 1, 1);
+		}
+	}
+};
+var end = function() {
+	changeEdit();
+};
+var sin = function(n) {
+	return Math.sin(n);
+};
+var cos = function(n) {
+	return Math.cos(n);
+};
+var tan = function(n) {
+	return Math.tan(n);
+};
+var atan = function(y, x) {
+	return Math.atan(y, x);
+};
+var abs = function(n) {
+	return Math.abs(n);
+};
+var rnd = function(n) {
+	return Math.floor(Math.random() * n);
+};
+/*
+function print(s) {
+	if (document.getElementById("edit").style.display != "block") {
+		alert(s);
+		end();
+	}
+}
+*/
+
+</script>
+</head>
+<body>
+
+<div id='main'>
+	<div id='dright'>
+		<div id='dgame'>
+			<canvas id='canvas' width='400' height='400'></canvas>
+
+<div id='helpframe'>
+<h3>●はじめに</h3>
+<br>
+”しかく”をかく<br>
+rect(20,20,20,10)<br>
+<br>
+”まる”をかく<br>
+circle(25,25,10)<br>
+<br>
+”いろ”をかえる<br>
+color(12)<br>
+rect(20,20,20,10)<br>
+
+<h3>●いろいろかこう</h3>
+<br>
+くるま<br>
+color(12)<br>
+rect(20,20,20,10)<br>
+color(0)<br>
+circle(25,30,3)<br>
+circle(35,30,3)<br>
+<br>
+はな<br>
+color(10)<br>
+rect(24,25,2,25)<br>
+color(12)<br>
+circle(25,15,10)<br>
+circle(25,35,10)<br>
+circle(15,25,10)<br>
+circle(35,25,10)<br>
+color(14)<br>
+circle(25,25,14)<br>
+<br>
+くま<br>
+color(4)<br>
+circle(25,30,18)<br>
+circle(14,16,10)<br>
+circle(36,16,10)<br>
+color(0)<br>
+circle(14,34,3)<br>
+circle(36,34,3)<br>
+color(6)<br>
+circle(25,40,2)<br>
+<br>
+うるうるくまさん<br>
+color(4)<br>
+circle(25,30,18)<br>
+circle(14,16,10)<br>
+circle(36,16,10)<br>
+color(0)<br>
+circle(14+t%2/4,34,3)<br>
+circle(36+t%2/4,34,3)<br>
+color(15)<br>
+circle(14+t%2/4,33,.5)<br>
+circle(36+t%2/4,33,.5)<br>
+circle(14.5+t%2/4,35,1)<br>
+circle(35.5+t%2/4,35,1)<br>
+color(6)<br>
+circle(25,40,2)<br>
+<br>
+ゆきだるま<br>
+color(7)<br>
+rect(0,0,50,50)<br>
+color(15)<br>
+circle(25,13,12)<br>
+circle(25,34,15)<br>
+color(0)<br>
+circle(20,13,2)<br>
+circle(30,13,2)<br>
+rect(23,16,4,2)<br>
+<br>
+ゆきだるまはどこ？（ヒント：１ボタン）<br>
+color(one?0:15)<br>
+rect(0,0,50,50)<br>
+color(15)<br>
+circle(25,13,12)<br>
+circle(25,34,15)<br>
+color(0)<br>
+circle(20,13,2)<br>
+circle(30,13,2)<br>
+rect(23,16,4,2)<br>
+<br>
+うごくくるま（●ボタンでリセット）<br>
+color(12)<br>
+rect(20+t,20,20,10)<br>
+color(0)<br>
+circle(25+t,30,3)<br>
+circle(35+t,30,3)<br>
+<br>
+うごくくるま２<br>
+x=t<br>
+color(12)<br>
+rect(x,20,20,10)<br>
+color(0)<br>
+circle(x+5,30,3)<br>
+circle(x+15,30,3)<br>
+<br>
+うごくくるま３<br>
+x=t<br>
+y=20<br>
+color(12)<br>
+rect(x,y,20,10)<br>
+color(0)<br>
+circle(x+5,y+10,3)<br>
+circle(x+15,y+10,3)<br>
+<br>
+ジャンプするくるま<br>
+x=t<br>
+y=one?15:20<br>
+color(12)<br>
+rect(x,y,20,10)<br>
+color(0)<br>
+circle(x+5,y+10,3)<br>
+circle(x+15,y+10,3)<br>
+<br>
+くるまをうごかす（みぎ、ひだり）<br>
+x=right?x+1:x<br>
+x=left?x-1:x<br>
+y=one?15:20<br>
+color(12)<br>
+rect(x,y,20,10)<br>
+color(0)<br>
+circle(x+5,y+10,3)<br>
+circle(x+15,y+10,3)<br>
+<br>
+<h3>●いろ</h3>
+<br>
+きらきら<br>
+color(t%16)<br>
+rect(0,0,50,50)<br>
+<br>
+きらきら（くらめ）<br>
+color(t%8)<br>
+rect(0,0,50,50)<br>
+<br>
+きらきら（あかるめ）<br>
+color(t%8+8)<br>
+rect(0,0,50,50)<br>
+<br>
+ちかちか（あか）<br>
+color(t%2*12)<br>
+rect(0,0,50,50)<br>
+<br>
+ちかちか（あか、き）<br>
+color(t%2?12:14)<br>
+rect(0,0,50,50)<br>
+<br>
+ちかっちかっ（あか、き）<br>
+color(t%5?12:14)<br>
+rect(0,0,50,50)<br>
+<br>
+きらきら（ゆっくり）<br>
+color((t/5)%16)<br>
+rect(0,0,50,50)<br>
+<br>
+いろアニメ<br>
+color([0,0,0,0,4,12,4][t%7])<br>
+rect(0,0,50,50)<br>
+<br>
+いろかえ（ボタン）<br>
+color(one?15:3)<br>
+rect(0,0,50,50)<br>
+<br>
+<h3>●アニメーション</h3>
+<br>
+”みぎ”から”ひだり”<br>
+rect(t,0,10,10)<br>
+<br>
+”ひだり”から”みぎ”<br>
+rect(50-t,0,10,10)<br>
+<br>
+”みぎ”から”ひだり”（はやく）<br>
+rect(t*2,0,10,10)<br>
+<br>
+”みぎ”から”ひだり”（もっとはやく）<br>
+rect(t*3,0,10,10)<br>
+<br>
+”みぎ”から”ひだり”（もっともっとはやく）<br>
+rect(t*4,0,10,10)<br>
+<br>
+”みぎ”から”ひだり”（ゆっくり）<br>
+rect(t/4,0,10,10)<br>
+<br>
+”みぎ”から”ひだり”（なんども）<br>
+rect(t%50,0,10,10)<br>
+<br>
+おおきくなる”しかく”<br>
+rect(10,10,t,t)<br>
+<br>
+おおきくなる”まる”<br>
+circle(25,25,t)<br>
+<br>
+おおきくなる”まる”（ゆっくり）<br>
+circle(25,25,t/2)<br>
+<br>
+なんどもおおきくなる”まる”<br>
+circle(25,25,t%20)<br>
+<br>
+ふるえる”まる”<br>
+circle(25,25,10+t%3)<br>
+<br>
+おうふくする”しかく”<br>
+rect(20+cos(t/4)*20,0,10,10)<br>
+<br>
+おうふくする”まる”<br>
+circle(25+cos(t/4)*20,25,5)<br>
+<br>
+おうふくする”まる”（ちいさく）<br>
+circle(25+cos(t/4)*5,25,5)<br>
+<br>
+おうふくする”まる”（ちいさく、はやく）<br>
+circle(25+cos(t)*5,25,5)<br>
+<br>
+おうふくする”まる”（ちいさく、もっとはやく）<br>
+circle(25+cos(t*2)*5,25,5)<br>
+<br>
+じょうげに、おうふくする”まる”<br>
+circle(25,25+cos(t/4)*20,5)<br>
+<br>
+ぐるぐるまわる”まる”<br>
+circle(25+cos(t/4)*20,25+sin(t/4)*20,5)<br>
+<br>
+ななめに、おうふくする”まる”<br>
+circle(25+cos(t/4)*20,25+cos(t/4)*20,5)<br>
+<br>
+へんにうごく”まる”<br>
+circle(25+cos(t/4)*20,25+cos(t/3)*20,5)<br>
+<br>
+もっとへんにうごく”まる”<br>
+circle(25+cos(t/7)*20,25+cos(t/3)*20,5)<br>
+
+</div>
+			<div id='dpad'>
+				<div class='btnd' id='up'>↑</div>
+				<div class='btnd' id='down'>↓</div>
+				<div class='btnd' id='right'>→</div>
+				<div class='btnd' id='left'>←</div>
+				<div class='btnd' id='one'>1</div>
+				<div class='btnd' id='two'>2</div>
+				<div class='btnd' id='reset'>●</div>
+				<div class='btnd' id='helpbtn'>？</div>
+				<div class='btnd' id='reload'>■</div>
+				<div class='btnd' id='hint'>▲</div>
+				<div class='btnd' id='bg'>□</div>
+			</div>
+			<div id=title>progrun</div>
+			<!--<a href="http://fukuno.jig.jp/KidsIT"><div id=title>progrun</div></a>-->
+			<!--<div id='title'>progrun<br>first programming environment</div>-->
+		</div>
+	</div>
+	<div id='dleft'>
+		<div id='editor'></div>
+		<div id='keypad'></div>
+		<div class='btnedit' id='save'>△</div>
+		<div class='btnedit' id='load'>▽</div>
+		<div class='btnedit' id='cls'>×</div>
+	</div>
+</div>
+<!--
+<div id='dump'></div>
+
+<div id='credit'><img id='help'><a href='http://fukuno.jig.jp/2012/'>(c)taisukef CED</a>, mod by syuu</div>
+<div id='helptips'><div id='helptipscontent'>
+こども用プログラミング開発環境です。<br>
+<br>
+左側に書いたプログラムが、リアルタイムに右側の実行画面に反映されます。<br>
+ヘルプを写すことから始めてみてください。<br>
+<br>
+ご意見ご感想はこちらのFacebookページまでお願いします。<br>
+「<a href=https://www.facebook.com/pages/%E3%81%93%E3%81%A9%E3%82%82%E3%83%97%E3%83%AD%E3%82%B0%E3%83%A9%E3%83%9F%E3%83%B3%E3%82%B0%E6%95%99%E5%AE%A4/110059562435397>こどもプログラミング教室</a>」<br>
+</div></div>
+-->
+
+</body>
+</html>
